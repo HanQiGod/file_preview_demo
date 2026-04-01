@@ -13,16 +13,7 @@
 - Android 权限演示
 - 同一份文件在两种预览策略之间切换
 
-## 运行方式
+### 文章地址[https://mp.weixin.qq.com/s/vp7S0HanMslpdZy-xVbxsw]
 
-```bash
-cd file_preview_demo
-flutter pub get
-flutter run
-```
-
-## 说明
-
-- AndroidManifest 已补充 `INTERNET`、`READ_EXTERNAL_STORAGE`、`READ_MEDIA_*` 权限声明。
-- 组合方案里没有直接接入 Office 专用内核，当前以说明卡片 + 外部打开作为兜底。
-- 如果你要继续扩展业务版，可以在组合方案的 Office 分支接入 `flutter_office_viewer` 或 Android X5 方案。
+### 展示图
+![展示图](assets/images/file_preview_demo.gif)
