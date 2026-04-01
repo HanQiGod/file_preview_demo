@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mini_pdf_epub_viewer/mini_pdf_epub_viewer.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -311,7 +311,7 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
       return;
     }
 
-    final result = await OpenFilex.open(selection.source);
+    final result = await OpenFile.open(selection.source);
     if (!mounted) {
       return;
     }

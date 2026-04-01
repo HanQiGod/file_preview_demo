@@ -36,8 +36,6 @@ PODS:
   - Flutter (1.0.0)
   - open_file_ios (1.0.3):
     - Flutter
-  - open_filex (0.0.2):
-    - Flutter
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -65,7 +63,6 @@ DEPENDENCIES:
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
-  - open_filex (from `.symlinks/plugins/open_filex/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - pdfrx (from `.symlinks/plugins/pdfrx/darwin`)
   - pdfx (from `.symlinks/plugins/pdfx/ios`)
@@ -88,8 +85,6 @@ EXTERNAL SOURCES:
     :path: Flutter
   open_file_ios:
     :path: ".symlinks/plugins/open_file_ios/ios"
-  open_filex:
-    :path: ".symlinks/plugins/open_filex/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   pdfrx:
@@ -111,7 +106,6 @@ SPEC CHECKSUMS:
   file_picker: b159e0c068aef54932bb15dc9fd1571818edaf49
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   open_file_ios: ece9c5358aec7b7ed7dc12fcb0f926ef6d6650f1
-  open_filex: 6e26e659846ec990262224a12ef1c528bb4edbe4
   path_provider_foundation: 0b743cbb62d8e47eab856f09262bb8c1ddcfe6ba
   pdfrx: 7d42fd227c1ea6a48d7e687cfe27d503238c7f97
   pdfx: 7b876b09de8b7a0bf444a4f82b439ffcff4ee1ec
