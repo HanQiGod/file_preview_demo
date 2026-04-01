@@ -13,7 +13,7 @@
 - Android 权限演示
 - 同一份文件在两种预览策略之间切换
 
-### 文章地址[https://mp.weixin.qq.com/s/vp7S0HanMslpdZy-xVbxsw]
+### 文章地址[]
 
 ### 展示图
 ![展示图](assets/images/file_preview_demo.gif)

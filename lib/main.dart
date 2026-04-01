@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart' as file_picker;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mini_pdf_epub_viewer/mini_pdf_epub_viewer.dart';
 import 'package:open_filex/open_filex.dart';
@@ -10,7 +11,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:universal_file_viewer/universal_file_viewer.dart';
+
+import 'universal_preview_bridge.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,9 +73,20 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
   bool _isPicking = false;
   bool _isRequestingPermission = false;
 
+  bool get _supportsUniversalStrategy {
+    if (kIsWeb) {
+      return false;
+    }
+
+    return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+  }
+
   @override
   void initState() {
     super.initState();
+    if (!_supportsUniversalStrategy) {
+      _strategy = PreviewStrategy.composable;
+    }
     _bootstrapDemo();
   }
 
@@ -309,9 +322,7 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
     }
 
     final message = result.message.trim();
-    _showMessage(
-      message.isEmpty ? '外部打开失败。' : '外部打开失败：$message',
-    );
+    _showMessage(message.isEmpty ? '外部打开失败。' : '外部打开失败：$message');
   }
 
   void _showMessage(String message) {
@@ -328,11 +339,7 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF7F1E8),
-              Color(0xFFF4F8F3),
-              Color(0xFFEAF4F8),
-            ],
+            colors: [Color(0xFFF7F1E8), Color(0xFFF4F8F3), Color(0xFFEAF4F8)],
           ),
         ),
         child: SafeArea(
@@ -427,7 +434,9 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
 
   Widget _buildStrategyCard(BuildContext context) {
     final theme = Theme.of(context);
-    final strategyNote = _strategy == PreviewStrategy.universal
+    final strategyNote = !_supportsUniversalStrategy
+        ? '当前平台不启用 universal_file_viewer，默认切换为自由组合方案，避免把不受支持的插件路径编进调试运行。'
+        : _strategy == PreviewStrategy.universal
         ? '全能型插件模式：由 universal_file_viewer 负责扩展名识别与兜底，适合快速上线。'
         : '自由组合模式：图片走 PhotoView，PDF 走 mini_pdf_epub_viewer，文本与 CSV 由业务代码接管，适合精细化控制。';
 
@@ -445,13 +454,14 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
           SegmentedButton<PreviewStrategy>(
             multiSelectionEnabled: false,
             showSelectedIcon: false,
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: PreviewStrategy.universal,
+                enabled: _supportsUniversalStrategy,
                 icon: Icon(Icons.widgets_outlined),
                 label: Text('全能型插件'),
               ),
-              ButtonSegment(
+              const ButtonSegment(
                 value: PreviewStrategy.composable,
                 icon: Icon(Icons.account_tree_outlined),
                 label: Text('自由组合'),
@@ -534,9 +544,7 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
                         ? Icons.hourglass_top_rounded
                         : Icons.verified_user_outlined,
                   ),
-                  label: Text(
-                    _isRequestingPermission ? '申请中...' : '申请读取权限',
-                  ),
+                  label: Text(_isRequestingPermission ? '申请中...' : '申请读取权限'),
                 ),
                 if (hasPermanentlyDenied)
                   OutlinedButton.icon(
@@ -778,11 +786,20 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
     }
 
     if (_strategy == PreviewStrategy.universal) {
+      if (!_supportsUniversalStrategy) {
+        return const _FallbackPreview(
+          icon: Icons.widgets_outlined,
+          title: '当前平台未启用全能型插件',
+          message: '为了避免把 universal_file_viewer 的不兼容路径带入当前平台调试，这里默认回退到自由组合方案。',
+        );
+      }
+
       return KeyedSubtree(
         key: ValueKey('universal-${selection.cacheKey}'),
-        child: selection.isRemote
-            ? UniversalFileViewer.remote(fileUrl: selection.source)
-            : UniversalFileViewer(file: File(selection.source)),
+        child: buildUniversalStrategyPreview(
+          source: selection.source,
+          isRemote: selection.isRemote,
+        ),
       );
     }
 
@@ -804,7 +821,8 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
           return _FallbackPreview(
             icon: Icons.download_for_offline_outlined,
             title: '远程文本未内置读取',
-            message: '文章里提到，网络文件通常会先下载到本地再预览。这个 demo 的组合方案只直接处理本地 text / md 文件。',
+            message:
+                '文章里提到，网络文件通常会先下载到本地再预览。这个 demo 的组合方案只直接处理本地 text / md 文件。',
           );
         }
         return TextFilePreview(path: selection.source);
@@ -821,7 +839,8 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
         return _FallbackPreview(
           icon: Icons.description_outlined,
           title: 'Office 文档需要专用内核',
-          message: '组合方案里，Office 预览通常要接 flutter_office_viewer 或 Android 的 X5 内核。这个 demo 保留了外部打开入口，避免引入平台专属实现。',
+          message:
+              '组合方案里，Office 预览通常要接 flutter_office_viewer 或 Android 的 X5 内核。这个 demo 保留了外部打开入口，避免引入平台专属实现。',
           actionLabel: selection.isRemote ? null : '外部打开',
           onAction: selection.isRemote ? null : _openExternally,
         );
@@ -877,7 +896,8 @@ class _FilePreviewDemoPageState extends State<FilePreviewDemoPage> {
     return switch (selection.kind) {
       PreviewKind.image => '组合方案会把图片交给 PhotoView，获得更细的手势缩放控制。',
       PreviewKind.pdf => '组合方案会把 PDF 交给 mini_pdf_epub_viewer，并保留缩略图侧栏。',
-      PreviewKind.text || PreviewKind.markdown => '组合方案会直接读取本地文本内容，适合接入自己的高亮或业务标注。',
+      PreviewKind.text ||
+      PreviewKind.markdown => '组合方案会直接读取本地文本内容，适合接入自己的高亮或业务标注。',
       PreviewKind.csv => '组合方案会把 CSV 解析成表格，便于继续叠加排序、筛选和复制能力。',
       PreviewKind.office => 'Office 文档在组合方案里通常要接专用内核；这个 demo 只保留了预留位和兜底入口。',
       PreviewKind.video => '视频更适合接入专门播放器组件；这里用说明卡片代替。',
@@ -1098,15 +1118,11 @@ class DemoSeedRepository {
     final rect = Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
 
     final backgroundPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        rect.topLeft,
-        rect.bottomRight,
-        const [
-          Color(0xFF143642),
-          Color(0xFF0F766E),
-          Color(0xFFF59E0B),
-        ],
-      );
+      ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, const [
+        Color(0xFF143642),
+        Color(0xFF0F766E),
+        Color(0xFFF59E0B),
+      ]);
     canvas.drawRect(rect, backgroundPaint);
 
     final circlePaint = Paint()..color = const Color(0x22FFFFFF);
@@ -1121,10 +1137,7 @@ class DemoSeedRepository {
     canvas.drawRRect(boardRect, boardPaint);
 
     final shadowPaint = Paint()..color = const Color(0x180F172A);
-    canvas.drawRRect(
-      boardRect.shift(const Offset(0, 16)),
-      shadowPaint,
-    );
+    canvas.drawRRect(boardRect.shift(const Offset(0, 16)), shadowPaint);
     canvas.drawRRect(boardRect, boardPaint);
 
     _paintText(
@@ -1168,10 +1181,7 @@ class DemoSeedRepository {
       const Rect.fromLTWH(148, 392, 420, 92),
       const Radius.circular(28),
     );
-    canvas.drawRRect(
-      highlightRect,
-      Paint()..color = const Color(0xFF143642),
-    );
+    canvas.drawRRect(highlightRect, Paint()..color = const Color(0xFF143642));
 
     _paintText(
       canvas,
@@ -1190,10 +1200,7 @@ class DemoSeedRepository {
       const Rect.fromLTWH(720, 188, 256, 256),
       const Radius.circular(36),
     );
-    canvas.drawRRect(
-      noteRect,
-      Paint()..color = const Color(0xFFFDF2D0),
-    );
+    canvas.drawRRect(noteRect, Paint()..color = const Color(0xFFFDF2D0));
     _paintText(
       canvas,
       text: 'Preview\nAnywhere',
@@ -1315,10 +1322,7 @@ class CsvFilePreview extends StatelessWidget {
           if (row.length == maxColumns) {
             return row;
           }
-          return [
-            ...row,
-            ...List<String>.filled(maxColumns - row.length, ''),
-          ];
+          return [...row, ...List<String>.filled(maxColumns - row.length, '')];
         })
         .toList(growable: false);
   }
@@ -1407,10 +1411,7 @@ class _SurfaceCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }
@@ -1432,9 +1433,9 @@ class _HeroTag extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
